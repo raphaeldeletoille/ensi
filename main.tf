@@ -18,8 +18,8 @@ provider "azurerm" {
 #terraform init -upgrade
 
 resource "azurerm_resource_group" "rg" {
-  name     = "raphd"
-  location = "West Europe"
+  name     = "${var.name}d"
+  location = var.location 
 }
 
 #terraform apply
@@ -29,8 +29,8 @@ resource "azurerm_resource_group" "rg" {
 
 resource "azurerm_storage_account" "storage" {
   name                     = "raphdstorage"
-  resource_group_name      = azurerm_resource_group.rg.name
-  location                 = azurerm_resource_group.rg.location
+  resource_group_name      = data.azurerm_resource_group.lergdecorentin.name
+  location                 = data.azurerm_resource_group.lergdecorentin.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
 }
@@ -189,5 +189,109 @@ resource "azurerm_private_endpoint" "networkcard" {
   }
 }
 
+resource "azurerm_public_ip" "mypublicip" {
+  name                = "raph-ip"
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+  allocation_method   = "Static"
+}
+
+resource "azurerm_network_interface" "myvmcard" {
+  name                = "myvmcard"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+
+  ip_configuration {
+    name                          = "internal"
+    subnet_id                     = azurerm_subnet.mysubnet[0].id
+    private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.mypublicip.id
+  }
+}
+
+resource "azurerm_windows_virtual_machine" "myvm" {
+  name                = "raph-vm"
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+  size                = "Standard_B2s"
+  admin_username      = "adminuser"
+  admin_password      = "P@$$w0rd1234!"
+  network_interface_ids = [
+    azurerm_network_interface.myvmcard.id,
+  ]
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+
+  source_image_reference {
+    publisher = "MicrosoftWindowsServer"
+    offer     = "WindowsServer"
+    sku       = "2016-Datacenter"
+    version   = "latest"
+  }
+}
+
+# Deployer une Virtual Machine en Terraform (Windows Server ou Ubuntu) et la relier à votre subnet 0
+
+# Deployer une IP Public en Terraform pour vous connecter à votre VM
+
+# VM_Size = Standard_B2s
+
+# 1ere Solution : VPN 
+# 2eme Solution (Azure) : Bastion 
+# 3eme Solution : Ip public 
+
+# 13h45 V 
+
+# 1) Recoltez les logs de vos resources (IP Forbiddent)
+# 2) Monitorez (Analyse) (Quelle fréquence)
+# 3) Alerte (Si + de 10 Forbiden, recevoir un appel téléphonique) --> Créer un Action Group, Créer sa Règle d'alerting. 
+
+# SMS/ APPEL / EMAIL 
+
+
+# En Terraform : 
+
+#1ere etape : Créer un Log Analytics Workspace 
+
+#2eme etape : Envoyer les logs & metrics de votre keyvault vers votre Log Analytics (Diagnostic Settings)
+
+
+resource "azurerm_log_analytics_workspace" "myloganalytics" {
+  name                = "raph-log-analytics"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  sku                 = "PerGB2018"
+  retention_in_days   = 30
+}
+
+resource "azurerm_monitor_diagnostic_setting" "sendkvlogs" {
+  name                       = "sendkvlogs"
+  target_resource_id         = azurerm_key_vault.keyvault.id
+  log_analytics_workspace_id = data.azurerm_log_analytics_workspace.leloganalyticsdeleo.workspace_id
+
+  enabled_log {
+    category = "AuditEvent"
+
+    retention_policy {
+      enabled = false
+    }
+  }
+
+  metric {
+    category = "AllMetrics"
+
+    retention_policy {
+      enabled = false
+    }
+  }
+}
+
+#Datasource : Permet de récupérer des informations et utiliser une resource déjà existante en dehors de votre code. 
+
+#Vous allez déposer un secret dans mon keyvault (via un datasource). 
+#Essayez d'utiliser des variables 
 
 

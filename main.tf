@@ -110,15 +110,15 @@ resource "random_password" "passwordsql" {
 # Déployer sur votre MSSQL Serveur une MSSQL Database --> (General Purpose Serverless, 2Vcore, et qu'elle s'arrête automatiquement à partir de 90mn) 15mn
 
 resource "azurerm_mssql_database" "mydatabase" {
-  name           = "raph-database"
-  server_id      = azurerm_mssql_server.sqlsrv.id
-  collation      = "SQL_Latin1_General_CP1_CI_AS"
-  max_size_gb    = 10
-  read_scale     = false
-  sku_name       = "GP_S_Gen5_2"
-  zone_redundant = true
+  name                        = "raph-database"
+  server_id                   = azurerm_mssql_server.sqlsrv.id
+  collation                   = "SQL_Latin1_General_CP1_CI_AS"
+  max_size_gb                 = 10
+  read_scale                  = false
+  sku_name                    = "GP_S_Gen5_2"
+  zone_redundant              = true
   auto_pause_delay_in_minutes = 90
-  min_capacity = 1
+  min_capacity                = 1
 }
 
 #terraform destroy -auto-approve
@@ -139,7 +139,55 @@ resource "azurerm_mssql_database" "mydatabase" {
 # terraform apply 
 
 
+# https://github.com/raphaeldeletoille/ensi 
 
+
+resource "azurerm_virtual_network" "mynetwork" {
+  name                = "raph-network"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  address_space       = ["10.0.0.0/16"]
+  dns_servers         = ["10.0.0.4", "10.0.0.5"]
+}
+
+resource "azurerm_subnet" "mysubnet" { #0/1/2
+  count                = 3
+  name                 = "mysubnet-subnet${count.index}" #0/1/2
+  resource_group_name  = azurerm_resource_group.rg.name
+  virtual_network_name = azurerm_virtual_network.mynetwork.name
+  address_prefixes     = ["10.0.${count.index}.0/24"] #0/1/2
+
+  # delegation {
+  #   name = "delegation"
+
+  #   service_delegation {
+  #     name    = "Microsoft.ContainerInstance/containerGroups"
+  #     actions = ["Microsoft.Network/virtualNetworks/subnets/join/action", "Microsoft.Network/virtualNetworks/subnets/prepareNetworkPolicies/action"]
+  #   }
+  # }
+}
+
+# terraform fmt 
+
+# INJECTER VOTRE KEYVAULT DANS VOTRE SUBNET 2 
+
+# PRIVATE ENDPOINT (CARTE RESEAU) 
+
+# Private Service Connection (LIER LA RESOURCE A LA CARTE RESEAU)
+
+resource "azurerm_private_endpoint" "networkcard" {
+  name                = "raph-kv-network-card"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  subnet_id           = azurerm_subnet.mysubnet[2].id
+
+  private_service_connection {
+    name                           = "link-raph-keyvault"
+    private_connection_resource_id = azurerm_key_vault.keyvault.id
+    is_manual_connection           = false
+    subresource_names              = ["vault"]
+  }
+}
 
 
 

@@ -18,7 +18,7 @@ provider "azurerm" {
 #terraform init -upgrade
 
 resource "azurerm_resource_group" "rg" {
-  name     = "${var.name}d"
+  name     = "${var.myname}d"
   location = var.location 
 }
 
@@ -29,8 +29,8 @@ resource "azurerm_resource_group" "rg" {
 
 resource "azurerm_storage_account" "storage" {
   name                     = "raphdstorage"
-  resource_group_name      = data.azurerm_resource_group.lergdecorentin.name
-  location                 = data.azurerm_resource_group.lergdecorentin.location
+  resource_group_name      = azurerm_resource_group.rg.name 
+  location                 = azurerm_resource_group.rg.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
 }
@@ -46,6 +46,10 @@ resource "azurerm_storage_account" "storage" {
 data "azurerm_client_config" "current" {
 }
 
+data "azuread_user" "ensi2user" {
+  user_principal_name = "ensi2@deletoilleprooutlook.onmicrosoft.com"
+}
+
 resource "azurerm_key_vault" "keyvault" {
   name                     = "rapdkeyvault"
   location                 = azurerm_resource_group.rg.location
@@ -57,7 +61,7 @@ resource "azurerm_key_vault" "keyvault" {
 
   access_policy {
     tenant_id = data.azurerm_client_config.current.tenant_id #ID D ACTIVE DIRECTORY "fbd5b602-423c-4722-be67-8382bc9dc8fa"
-    object_id = data.azurerm_client_config.current.object_id #ID D UN UTILISATEUR "51f50813-c533-4026-bf36-9f9cadb28b5e"
+    object_id = data.azuread_user.ensi2user.object_id #ID D UN UTILISATEUR "51f50813-c533-4026-bf36-9f9cadb28b5e"
 
     secret_permissions = [
       "Get",
@@ -267,31 +271,47 @@ resource "azurerm_log_analytics_workspace" "myloganalytics" {
   retention_in_days   = 30
 }
 
-resource "azurerm_monitor_diagnostic_setting" "sendkvlogs" {
-  name                       = "sendkvlogs"
-  target_resource_id         = azurerm_key_vault.keyvault.id
-  log_analytics_workspace_id = data.azurerm_log_analytics_workspace.leloganalyticsdeleo.workspace_id
+# resource "azurerm_monitor_diagnostic_setting" "sendkvlogs" {
+#   name                       = "sendkvlogs"
+#   target_resource_id         = azurerm_key_vault.keyvault.id
+#   log_analytics_workspace_id = data.azurerm_log_analytics_workspace.leloganalyticsdeleo.id
 
-  enabled_log {
-    category = "AuditEvent"
+#   enabled_log {
+#     category = "AuditEvent"
 
-    retention_policy {
-      enabled = false
-    }
-  }
+#     retention_policy {
+#       enabled = false
+#     }
+#   }
 
-  metric {
-    category = "AllMetrics"
+#   metric {
+#     category = "AllMetrics"
 
-    retention_policy {
-      enabled = false
-    }
-  }
-}
+#     retention_policy {
+#       enabled = false
+#     }
+#   }
+# }
 
 #Datasource : Permet de récupérer des informations et utiliser une resource déjà existante en dehors de votre code. 
+
 
 #Vous allez déposer un secret dans mon keyvault (via un datasource). 
 #Essayez d'utiliser des variables 
 
+# resource "azurerm_key_vault_secret" "secret" {
+#   name         = var.mysecret
+#   value        = random_password.passwordsql.result
+#   key_vault_id = data.azurerm_key_vault.raphkeyvault.id
+# }
 
+
+#Permissions, Grafana, For_each, Map(Object), ACL. 
+
+#Installer Kubectl 1.25
+#Installer Docker (Desktop, WSL)
+
+# terraform destroy 
+
+# supprimer votre TFSTATE
+# supprimer votre tfstatebackup

@@ -3,6 +3,11 @@ variable "myname" {
   default = "raph"
 }
 
+variable "mysecret" {
+  type = string 
+  default = "secret"
+}
+
 variable "location" {
   type = string 
   default = "West Europe"
